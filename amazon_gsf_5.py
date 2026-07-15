@@ -104,10 +104,11 @@ pc_template['Line Category'] = 'item_code'
 pc_template['PO Number'] = gsf_kbs_invoices_w_colocated['Customer WO#']
 pc_template['Line Description'] = pc_template['Invoice Description']
 
-# Temp columns to merge and bring in Line # from PC data
-pc_template['Site - WO#'] = gsf_kbs_invoices_w_colocated['Site Code'] + ' - ' + gsf_kbs_invoices_w_colocated['Customer WO#']
-pc_template['Site - WO#2'] = gsf_kbs_invoices_w_colocated['replaced_colocated_site'] + ' - ' + gsf_kbs_invoices_w_colocated['Customer WO#']
-pc_combined_output['Site - WO#'] = pc_combined_output['Site Name'] + ' - ' + pc_combined_output['Customer WO#']
+# Temp columns to merge and bring in Line # from PC data.
+# MATCH on first 4 characters of the site code (handles longer IFS site codes).
+pc_template['Site - WO#'] = gsf_kbs_invoices_w_colocated['Site Code'].astype(str).str[:4] + ' - ' + gsf_kbs_invoices_w_colocated['Customer WO#'].astype(str)
+pc_template['Site - WO#2'] = gsf_kbs_invoices_w_colocated['replaced_colocated_site'].astype(str).str[:4] + ' - ' + gsf_kbs_invoices_w_colocated['Customer WO#'].astype(str)
+pc_combined_output['Site - WO#'] = pc_combined_output['Site Name'].astype(str).str[:4] + ' - ' + pc_combined_output['Customer WO#'].astype(str)
 
 pc_template = pc_template.merge(pc_combined_output, how='left', on='Site - WO#')
 pc_template = pc_template.merge(pc_combined_output, how='left', left_on = 'Site - WO#2', right_on='Site - WO#')

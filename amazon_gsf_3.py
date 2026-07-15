@@ -19,7 +19,10 @@ print(po_lines_combined_output[['Customer WO#','Site Name', 'Available Amount']]
 print('gsf_kbs_subtotal '+gsf_kbs_subtotal.columns)
 
 # Location Number_x refers to location number
-gsf_kbs_subtotal = gsf_kbs_subtotal.merge(po_lines_combined_output, how='left', left_on=['Location Number_x','Customer WO#'], right_on=['Site Name','Customer WO#'])
+# MATCH on first 4 characters of the site code (handles longer IFS site codes)
+gsf_kbs_subtotal['sitekey'] = gsf_kbs_subtotal['Location Number_x'].astype(str).str[:4]
+po_lines_combined_output['sitekey'] = po_lines_combined_output['Site Name'].astype(str).str[:4]
+gsf_kbs_subtotal = gsf_kbs_subtotal.merge(po_lines_combined_output, how='left', on=['sitekey','Customer WO#'])
 print('c')
 print(gsf_kbs_subtotal.columns)
 print(gsf_kbs_subtotal[['Location Number_x','Customer WO#','Available Amount']])
@@ -27,7 +30,9 @@ print(gsf_kbs_subtotal[['Location Number_y','Customer WO#','Available Amount']])
 
 # Location Number_y refers to colocated location number
 gsf_kbs_subtotal['Location Number_y'] = gsf_kbs_subtotal['replaced_colocated_site_x'].fillna('AAAA')
-gsf_kbs_subtotal = gsf_kbs_subtotal.merge(po_lines_combined_output, how='left', left_on=['Location Number_y','Customer WO#'], right_on=['Site Name','Customer WO#'], suffixes=('_y','_z'))
+# MATCH on first 4 characters of the colocated site code
+gsf_kbs_subtotal['sitekey'] = gsf_kbs_subtotal['Location Number_y'].astype(str).str[:4]
+gsf_kbs_subtotal = gsf_kbs_subtotal.merge(po_lines_combined_output, how='left', on=['sitekey','Customer WO#'], suffixes=('_y','_z'))
 
 print('gsf_kbs_subtotal')
 print(gsf_kbs_subtotal.columns)
@@ -52,7 +57,10 @@ print('Size'+str(gsf_kbs_invoices_w_colocated.reset_index(drop=True).shape[0]))
 print(gsf_kbs_invoices_w_colocated.columns)
 print(gsf_kbs_subtotal.columns)
 #print(gsf_kbs_subtotal.columns)
-gsf_kbs_invoices_w_colocated_w_available_amounts = gsf_kbs_invoices_w_colocated.merge(gsf_kbs_subtotal, how='left', left_on=['Site Code','Customer WO#'], right_on=['Location Number','Customer WO#'])
+# MATCH on first 4 characters of the site code
+gsf_kbs_invoices_w_colocated['sitekey'] = gsf_kbs_invoices_w_colocated['Site Code'].astype(str).str[:4]
+gsf_kbs_subtotal['sitekey'] = gsf_kbs_subtotal['Location Number'].astype(str).str[:4]
+gsf_kbs_invoices_w_colocated_w_available_amounts = gsf_kbs_invoices_w_colocated.merge(gsf_kbs_subtotal, how='left', on=['sitekey','Customer WO#'])
 print('a')
 print(gsf_kbs_invoices_w_colocated[['Site Code','Customer WO#']])
 print(gsf_kbs_subtotal[['Location Number','Customer WO#','Available Amount']])

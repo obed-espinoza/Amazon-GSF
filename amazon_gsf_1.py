@@ -31,6 +31,22 @@ start_date = today - pd.DateOffset(days=28)  # Today + 27 prior days = 28 day wi
 
 icrfc = icrfc[icrfc['Date'].between(start_date, today)]
 
+# --- FILTER BY CONTRACT MONTH (must span the full prior calendar month) ---
+# Keep only invoices whose Contract Start is the first day of last month AND
+# whose Contract End is the last day of last month. Anything that does not span
+# the exact month being billed is removed from submission (per guide).
+first_of_current_month = today.replace(day=1)
+last_month_end = first_of_current_month - pd.Timedelta(days=1)
+last_month_start = last_month_end.replace(day=1)
+
+contract_mask = (
+    (icrfc['Contract Start'].dt.normalize() == last_month_start) &
+    (icrfc['Contract End'].dt.normalize() == last_month_end)
+)
+print(f"Contract month window: {last_month_start.date()} to {last_month_end.date()}")
+print(f"Rows dropped by contract-month filter: {int((~contract_mask).sum())}")
+icrfc = icrfc[contract_mask]
+
 
 # --- OUTPUTS ---
 print(f"Filtering for range: {start_date.date()} to {today.date()}")
@@ -38,7 +54,12 @@ print(f"Number of rows after filter: {len(icrfc)}")
 print(icrfc.head())
 
 
-icrfc = icrfc[icrfc['Top Level Parent'] != 'P12501 System 1 Amazon']
+# --- SCOPE TO THE AMAZON GSF (KBS) AND AMAZON IFS ENTITIES ---
+# Selection is by parent entity, NOT by 'Customer Billing Group' (which may be
+# empty for newly added sites). Keep Amazon - GSF (KBS) = P10133 and Amazon
+# (IFS) = P13792. Everything else (e.g. System 1 Amazon P12501) is dropped.
+amazon_gsf_parents = ['P10133', 'P13792']
+icrfc = icrfc[icrfc['Top Level Parent'].astype(str).str.contains('|'.join(amazon_gsf_parents), na=False)]
 
 #print(icrfc['Customer Billing Group'])
 
@@ -79,12 +100,16 @@ merged_df.head()
 merged_df['Customer Billing Group'] = merged_df['Customer Billing Group'].fillna(merged_df['Site Type'])
 #print('merged_df2')
 #print(merged_df['Customer Billing Group'])
-# Replace Customer billing groups with valid values
-#merged_df['Customer Billing Group'] = merged_df['Customer Billing Group'].replace('AMZL', 'AMZL - (KBS)')
-s = 'Subsidiary (no hierarchy)'
-c = 'Customer Billing Group'
-gsf_kbs_invoices = merged_df.loc[(merged_df[s] == 'KBS') & (merged_df[c] == 'GSF'), c] = 'Amazon - GSF (KBS)'
-gsf_kbs_invoices = merged_df[merged_df[c]=='Amazon - GSF (KBS)'].reset_index(drop=True)
+# --- SELECT GSF/IFS SCOPE (SO Summary is the source of truth) ---
+# Do NOT gate on 'Customer Billing Group' - it may be empty for newly added
+# sites. Scope was already limited to the Amazon GSF (KBS, P10133) and Amazon
+# IFS (P13792) parents above. Any site not present in the SO Summary output is
+# dropped here (silently), per the guide.
+before_so = len(merged_df)
+merged_df = merged_df[merged_df['Site Code'].notna()].reset_index(drop=True)
+print(f"Rows dropped (site not found in SO Summary): {before_so - len(merged_df)}")
+
+gsf_kbs_invoices = merged_df.reset_index(drop=True)
 
 gsf_kbs_invoices.head()
 

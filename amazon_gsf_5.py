@@ -71,16 +71,12 @@ pc_template = pd.DataFrame(index=range(len(gsf_kbs_invoices_w_colocated)))
 gsf_kbs_invoices_w_colocated.to_excel(folder_outputs+'\\5-gsf_kbs_invoices_w_colocated_test.xlsx', index=False)
 gsf_kbs_invoices_w_colocated = pd.read_excel(folder_outputs+'\\5-gsf_kbs_invoices_w_colocated_test.xlsx')
 
-# Filter for non-empty descriptions that include either of the specified values
-gsf_kbs_invoices_w_colocated = gsf_kbs_invoices_w_colocated[
-    (gsf_kbs_invoices_w_colocated['Description'].notna()) &  # Not empty (not NaN)
-    (gsf_kbs_invoices_w_colocated['Description'] != '') &     # Not empty string
-    (gsf_kbs_invoices_w_colocated['Description'].str.contains(
-        'Account/Regional Manager|Cleaning Shift Lead|General Cleaner', 
-        case=True,  # Set to False if you want case-insensitive matching
-        na=False
-    ))
-]
+# NOTE: The job-title whitelist below was REMOVED per Thu's approval (July 2026).
+# It silently dropped ~48 invoices (~$551K) at 12 sites that switched to lump
+# 'Janitorial'/'Warehouse' billing, and all IFS supply/equipment invoices.
+# Descriptions are no longer filtered by service type.
+# (Former filter: Description must contain 'Account/Regional Manager',
+#  'Cleaning Shift Lead' or 'General Cleaner'.)
 
 pc_template['Sequence Number'] = pc_template.index+1
 pc_template['Invoice Number'] = gsf_kbs_invoices_w_colocated['Consolidated INV#'].fillna(gsf_kbs_invoices_w_colocated['Document Number'])
